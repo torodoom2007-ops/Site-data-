@@ -1,176 +1,524 @@
-<script>
-  // ==================== TELEGRAM TRACKING (מאובטח דרך השרת) ====================
-
-  function sendToTelegram(text) {
-    fetch('/api/track', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text })
-    }).catch(() => {});
-  }
-
-  // Session ID
-  function getSessionId() {
-    let sid = localStorage.getItem('mf_sid');
-    if (!sid) {
-      sid = 'S' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-      localStorage.setItem('mf_sid', sid);
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MemberFlow — המערכת הרשמית להוספת מנויים וחשיפה</title>
+  <meta name="description" content="MemberFlow — הדרך המהירה והמסודרת להגדיל את הערוץ או הקבוצה שלך ולהרוויח קרדיטים תוך כדי. אימות אוטומטי, מעקב הזמנות ושקיפות מלאה." />
+  <meta name="theme-color" content="#0B0B12" />
+  
+  <meta property="og:title" content="MemberFlow — הוספת מנויים וחשיפה" />
+  <meta property="og:description" content="המערכת הרשמית להוספת מנויים וחשיפה לערוצים וקבוצות" />
+  <meta property="og:type" content="website" />
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            dark: {
+              950: '#06060B',
+              900: '#0B0B12',
+              800: '#12121A',
+              700: '#1A1A24',
+              600: '#242430',
+            },
+            accent: {
+              from: '#4F6BFF',
+              via: '#7B5CFF',
+              to: '#A855F7',
+              light: '#818CF8',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+          animation: {
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'float': 'float 6s ease-in-out infinite',
+            'glow': 'glow 2s ease-in-out infinite alternate',
+          },
+          keyframes: {
+            float: {
+              '0%, 100%': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-12px)' },
+            },
+            glow: {
+              '0%': { boxShadow: '0 0 20px rgba(79, 107, 255, 0.3)' },
+              '100%': { boxShadow: '0 0 40px rgba(168, 85, 247, 0.5)' },
+            }
+          }
+        }
+      }
     }
-    return sid;
-  }
+  </script>
+  
+  <style>
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: #0B0B12;
+      color: #F1F5F9;
+      font-family: 'Inter', system-ui, sans-serif;
+      overflow-x: hidden;
+    }
+    
+    .gradient-text {
+      background: linear-gradient(135deg, #4F6BFF 0%, #7B5CFF 50%, #A855F7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .glass {
+      background: rgba(18, 18, 26, 0.7);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    
+    .glass-hover:hover {
+      border-color: rgba(79, 107, 255, 0.35);
+      box-shadow: 0 0 30px rgba(79, 107, 255, 0.12);
+      transform: translateY(-2px);
+    }
+    
+    .online-dot {
+      width: 8px;
+      height: 8px;
+      background: #22C55E;
+      border-radius: 50%;
+      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+      animation: online-pulse 2s infinite;
+    }
+    @keyframes online-pulse {
+      0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+      70% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #4F6BFF 0%, #7B5CFF 50%, #A855F7 100%);
+      transition: all 0.3s ease;
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 30px rgba(79, 107, 255, 0.4);
+    }
+    
+    .progress-bar {
+      background: linear-gradient(90deg, #4F6BFF, #A855F7);
+    }
+    
+    .a11y-panel {
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+    .a11y-panel.hidden-panel {
+      transform: translateX(120%);
+      opacity: 0;
+      pointer-events: none;
+    }
+    
+    body.high-contrast {
+      filter: contrast(1.25);
+    }
+    body.large-text {
+      font-size: 1.125rem;
+    }
+    body.large-text h1 { font-size: 3.5rem !important; }
+    body.large-text h2 { font-size: 2.5rem !important; }
+    
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    
+    .logo-glow {
+      filter: drop-shadow(0 0 12px rgba(79, 107, 255, 0.5));
+    }
+    
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0B0B12; }
+    ::-webkit-scrollbar-thumb { background: #2A2A3A; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #4F6BFF; }
+  </style>
+</head>
+<body class="bg-dark-900 text-slate-100 antialiased">
 
-  // Device info
-  function getDeviceInfo() {
-    const ua = navigator.userAgent;
-    let device = 'Desktop';
-    if (/Mobile|Android|iPhone|iPad/.test(ua)) device = 'Mobile';
-    if (/Tablet|iPad/.test(ua)) device = 'Tablet';
-    return {
-      device,
-      screen: `${screen.width}x${screen.height}`,
-      lang: navigator.language || 'unknown',
-      referrer: document.referrer || 'ישיר / אין מקור'
+  <!-- ACCESSIBILITY BUTTON -->
+  <button id="a11y-toggle" 
+    class="fixed bottom-6 left-6 z-50 w-14 h-14 rounded-full bg-dark-700 border border-white/10 flex items-center justify-center shadow-xl hover:bg-dark-600 transition-all"
+    aria-label="הגדרות נגישות">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+  </button>
+
+  <div id="a11y-panel" class="a11y-panel fixed bottom-24 left-6 z-50 w-72 glass rounded-2xl p-5 shadow-2xl hidden-panel">
+    <h3 class="font-semibold text-lg mb-4">הגדרות נגישות</h3>
+    <div class="space-y-3">
+      <button onclick="toggleA11y('large-text')" class="w-full text-right px-4 py-3 rounded-xl bg-dark-700 hover:bg-dark-600 transition text-sm">
+        הגדלת טקסט
+      </button>
+      <button onclick="toggleA11y('high-contrast')" class="w-full text-right px-4 py-3 rounded-xl bg-dark-700 hover:bg-dark-600 transition text-sm">
+        ניגודיות גבוהה
+      </button>
+      <button onclick="toggleA11y('underline-links')" class="w-full text-right px-4 py-3 rounded-xl bg-dark-700 hover:bg-dark-600 transition text-sm">
+        הדגשת קישורים
+      </button>
+      <button onclick="resetA11y()" class="w-full text-right px-4 py-3 rounded-xl bg-dark-800 hover:bg-dark-700 transition text-sm text-slate-400">
+        איפוס
+      </button>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header class="fixed top-0 inset-x-0 z-40 glass border-b border-white/5">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-3 group">
+        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-accent-from via-accent-via to-accent-to flex items-center justify-center logo-glow">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+          </svg>
+        </div>
+        <span class="font-bold text-lg tracking-tight">MemberFlow</span>
+      </a>
+
+      <nav class="hidden md:flex items-center gap-8 text-sm text-slate-300">
+        <a href="#how" class="hover:text-white transition">איך זה עובד</a>
+        <a href="#features" class="hover:text-white transition">תכונות</a>
+        <a href="#plans" class="hover:text-white transition">מסלולים</a>
+        <a href="#faq" class="hover:text-white transition">שאלות נפוצות</a>
+      </nav>
+
+      <div class="flex items-center gap-4">
+        <div class="hidden sm:flex items-center gap-2 text-xs text-slate-400">
+          <span class="online-dot"></span>
+          <span>Online</span>
+        </div>
+        <a href="https://t.me/add_sud_bot" target="_blank" rel="noopener"
+          class="btn-primary text-white text-sm font-semibold px-5 py-2.5 rounded-full">
+          התחל עכשיו
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="relative pt-32 pb-20 sm:pt-40 sm:pb-28 overflow-hidden">
+    <div class="absolute top-20 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-gradient-to-b from-accent-from/20 via-accent-via/10 to-transparent rounded-full blur-3xl pointer-events-none"></div>
+    
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center relative">
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass text-xs text-slate-300 mb-8 reveal">
+        <span class="online-dot"></span>
+        <span>המערכת הרשמית • Online</span>
+      </div>
+
+      <h1 class="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight tracking-tight mb-6 reveal">
+        הוספת מנויים וחשיפה<br />
+        <span class="gradient-text">ברמה של תוכנה מקצועית</span>
+      </h1>
+
+      <p class="text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed reveal">
+        MemberFlow — הדרך המהירה והמסודרת להגדיל את הערוץ או הקבוצה שלך,<br class="hidden sm:block" />
+        ולהרוויח קרדיטים תוך כדי. אימות אוטומטי • מעקב הזמנות • שקיפות מלאה.
+      </p>
+
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 reveal">
+        <a href="https://t.me/add_sud_bot" target="_blank" rel="noopener"
+          class="btn-primary text-white font-semibold px-8 py-3.5 rounded-full text-base flex items-center gap-2">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161c-.18 1.897-.962 6.502-1.359 8.627-.168.9-.5 1.201-.82 1.23-.697.064-1.226-.461-1.901-.903-1.056-.693-1.653-1.124-2.678-1.801-1.185-.781-.417-1.21.258-1.911.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.139-5.062 3.345-.479.329-.913.489-1.302.481-.428-.009-1.252-.242-1.865-.44-.752-.244-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.831-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635.099-.002.321.023.465.141.121.099.154.232.17.326.016.093.036.305.02.47z"/></svg>
+          התחל בטלגרם
+        </a>
+        <a href="https://t.me/add_sub_Q" target="_blank" rel="noopener"
+          class="px-8 py-3.5 rounded-full text-base font-medium border border-white/10 hover:border-white/20 hover:bg-white/5 transition flex items-center gap-2">
+          הצטרף לקהילה
+        </a>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto reveal" id="stats-grid">
+        <div class="glass rounded-2xl p-5 text-center">
+          <div class="text-2xl sm:text-3xl font-bold gradient-text" data-stat="users">—</div>
+          <div class="text-xs text-slate-400 mt-1">משתמשים פעילים</div>
+        </div>
+        <div class="glass rounded-2xl p-5 text-center">
+          <div class="text-2xl sm:text-3xl font-bold gradient-text" data-stat="orders">—</div>
+          <div class="text-xs text-slate-400 mt-1">הזמנות שהושלמו</div>
+        </div>
+        <div class="glass rounded-2xl p-5 text-center">
+          <div class="text-2xl sm:text-3xl font-bold gradient-text" data-stat="credits">—</div>
+          <div class="text-xs text-slate-400 mt-1">קרדיטים במחזור</div>
+        </div>
+        <div class="glass rounded-2xl p-5 text-center">
+          <div class="text-2xl sm:text-3xl font-bold gradient-text" data-stat="speed">—</div>
+          <div class="text-xs text-slate-400 mt-1">דק׳ ממוצע להזמנה</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section id="how" class="py-20 sm:py-28">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6">
+      <div class="text-center mb-14 reveal">
+        <h2 class="text-3xl sm:text-4xl font-bold mb-4">איך זה עובד?</h2>
+        <p class="text-slate-400 max-w-xl mx-auto">שלושה שלבים פשוטים. בלי סיבוכים.</p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="glass glass-hover rounded-2xl p-7 transition-all duration-300 reveal">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-accent-from/20 to-accent-to/20 flex items-center justify-center mb-5 text-accent-light font-bold text-lg">1</div>
+          <h3 class="font-semibold text-lg mb-2">הרווח קרדיטים</h3>
+          <p class="text-slate-400 text-sm leading-relaxed">הצטרף לערוצים המוצגים במערכת, אשר חברות וקבל Credits באופן מיידי. אימות אוטומטי כשהבוט אדמין.</p>
+        </div>
+        <div class="glass glass-hover rounded-2xl p-7 transition-all duration-300 reveal">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-accent-from/20 to-accent-to/20 flex items-center justify-center mb-5 text-accent-light font-bold text-lg">2</div>
+          <h3 class="font-semibold text-lg mb-2">הוסף את הערוץ שלך</h3>
+          <p class="text-slate-400 text-sm leading-relaxed">צור קלף קידום, בחר מסלול Credits והשקע. הערוץ שלך נכנס למאגר החשיפה מיד.</p>
+        </div>
+        <div class="glass glass-hover rounded-2xl p-7 transition-all duration-300 reveal">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-accent-from/20 to-accent-to/20 flex items-center justify-center mb-5 text-accent-light font-bold text-lg">3</div>
+          <h3 class="font-semibold text-lg mb-2">עקוב והגדל</h3>
+          <p class="text-slate-400 text-sm leading-relaxed">צפה בהתקדמות ההזמנה בזמן אמת. כשמסתיים — תקבל התראה. הכל שקוף ומדויק.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="features" class="py-20 sm:py-28 bg-dark-950/50">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6">
+      <div class="text-center mb-14 reveal">
+        <h2 class="text-3xl sm:text-4xl font-bold mb-4">למה MemberFlow?</h2>
+        <p class="text-slate-400 max-w-xl mx-auto">תכונות שנבנו כמו תוכנה מקצועית, לא כמו בוט רגיל.</p>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div class="glass glass-hover rounded-2xl p-6 transition-all duration-300 reveal">
+          <div class="text-2xl mb-3">⚡</div>
+          <h3 class="font-semibold mb-1">אימות אוטומטי</h3>
+          <p class="text-slate-400 text-sm">כשהבוט אדמין — בדיקת חברות מיידית מול שרתי טלגרם. בלי המתנה מיותרת.</p>
+        </div>
+        <div class="glass glass-hover rounded-2xl p-6 transition-all duration-300 reveal">
+          <div class="text-2xl mb-3">💎</div>
+          <h3 class="font-semibold mb-1">מערכת Credits</h3>
+          <p class="text-slate-400 text-sm">הרווח על הצטרפות, השקע על קידום. בונוס יומי, הפניות וקודי Promo.</p>
+        </div>
+        <div class="glass glass-hover rounded-2xl p-6 transition-all duration-300 reveal">
+          <div class="text-2xl mb-3">📊</div>
+          <h3 class="font-semibold mb-1">מעקב הזמנות</h3>
+          <p class="text-slate-400 text-sm">Progress bar חי, סטטוס מדויק, התראות על השלמה. הכל במקום אחד.</p>
+        </div>
+        <div class="glass glass-hover rounded-2xl p-6 transition-all duration-300 reveal">
+          <div class="text-2xl mb-3">🛡️</div>
+          <h3 class="font-semibold mb-1">אבטחה ושקיפות</h3>
+          <p class="text-slate-400 text-sm">אימות ספונסר תקופתי, מניעת ניצול, ולוגים מלאים להנהלה.</p>
+        </div>
+        <div class="glass glass-hover rounded-2xl p-6 transition-all duration-300 reveal">
+          <div class="text-2xl mb-3">🎫</div>
+          <h3 class="font-semibold mb-1">תמיכה טכנית</h3>
+          <p class="text-slate-400 text-sm">מערכת Tickets מלאה. פתח פנייה, קבל תשובה ישירות בבוט.</p>
+        </div>
+        <div class="glass glass-hover rounded-2xl p-6 transition-all duration-300 reveal">
+          <div class="text-2xl mb-3">⚙️</div>
+          <h3 class="font-semibold mb-1">פאנל אדמין</h3>
+          <p class="text-slate-400 text-sm">ניהול משתמשים, הזמנות, ערוצים, שידורים וגיבויים — הכל מתוך הבוט.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PLANS -->
+  <section id="plans" class="py-20 sm:py-28">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6">
+      <div class="text-center mb-14 reveal">
+        <h2 class="text-3xl sm:text-4xl font-bold mb-4">מסלולי קידום</h2>
+        <p class="text-slate-400 max-w-xl mx-auto">בחר כמה Credits להשקיע — וקבל מנויים איכותיים.</p>
+      </div>
+
+      <div class="grid sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
+        <div class="glass glass-hover rounded-2xl p-7 text-center transition-all duration-300 reveal">
+          <div class="text-sm text-slate-400 mb-2">Starter</div>
+          <div class="text-3xl font-bold mb-1">30 <span class="text-base font-normal text-slate-400">Credits</span></div>
+          <div class="text-accent-light font-semibold mb-5">10 מנויים</div>
+          <div class="text-xs text-slate-500">3 Credits למנוי</div>
+        </div>
+        <div class="glass rounded-2xl p-7 text-center relative overflow-hidden border-accent-from/40 reveal" style="box-shadow: 0 0 40px rgba(79,107,255,0.15)">
+          <div class="absolute top-3 left-1/2 -translate-x-1/2 text-[10px] font-semibold uppercase tracking-wider bg-gradient-to-r from-accent-from to-accent-to text-white px-3 py-0.5 rounded-full">הכי פופולרי</div>
+          <div class="text-sm text-slate-400 mb-2 mt-3">Growth</div>
+          <div class="text-3xl font-bold mb-1">60 <span class="text-base font-normal text-slate-400">Credits</span></div>
+          <div class="text-accent-light font-semibold mb-5">20 מנויים</div>
+          <div class="text-xs text-slate-500">3 Credits למנוי</div>
+        </div>
+        <div class="glass glass-hover rounded-2xl p-7 text-center transition-all duration-300 reveal">
+          <div class="text-sm text-slate-400 mb-2">Pro</div>
+          <div class="text-3xl font-bold mb-1">150 <span class="text-base font-normal text-slate-400">Credits</span></div>
+          <div class="text-accent-light font-semibold mb-5">55 מנויים</div>
+          <div class="text-xs text-slate-500">~2.7 Credits למנוי</div>
+        </div>
+      </div>
+
+      <p class="text-center text-sm text-slate-500 mt-8 reveal">המסלולים ניתנים לשינוי על ידי ההנהלה. הרווח Credits דרך הצטרפות לערוצים.</p>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="py-20 sm:py-28 bg-dark-950/50">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6">
+      <div class="text-center mb-12 reveal">
+        <h2 class="text-3xl sm:text-4xl font-bold mb-4">שאלות נפוצות</h2>
+      </div>
+
+      <div class="space-y-3" id="faq-list">
+        <details class="glass rounded-xl group reveal">
+          <summary class="px-6 py-4 cursor-pointer font-medium flex justify-between items-center list-none">
+            האם חובה להוסיף את הבוט כאדמין?
+            <span class="text-slate-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <div class="px-6 pb-4 text-sm text-slate-400 leading-relaxed">
+            לא חובה. אבל כשהבוט אדמין — מופעל אימות אוטומטי, תגמול מלא למצטרפים וקדימות בחשיפה.
+          </div>
+        </details>
+        <details class="glass rounded-xl group reveal">
+          <summary class="px-6 py-4 cursor-pointer font-medium flex justify-between items-center list-none">
+            איך מרוויחים Credits?
+            <span class="text-slate-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <div class="px-6 pb-4 text-sm text-slate-400 leading-relaxed">
+            דרך "הרווח קרדיטים חינם" — הצטרפות לערוצים, בונוס יומי, הפניות של חברים וקודי Promo.
+          </div>
+        </details>
+        <details class="glass rounded-xl group reveal">
+          <summary class="px-6 py-4 cursor-pointer font-medium flex justify-between items-center list-none">
+            כמה זמן לוקח להשלים הזמנה?
+            <span class="text-slate-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <div class="px-6 pb-4 text-sm text-slate-400 leading-relaxed">
+            תלוי בגודל המסלול ובזמינות משתמשים. בדרך כלל דקות עד שעות. אפשר לעקוב בזמן אמת.
+          </div>
+        </details>
+        <details class="glass rounded-xl group reveal">
+          <summary class="px-6 py-4 cursor-pointer font-medium flex justify-between items-center list-none">
+            מה קורה אם מבטלים הזמנה?
+            <span class="text-slate-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <div class="px-6 pb-4 text-sm text-slate-400 leading-relaxed">
+            ההנהלה יכולה לבטל עם החזר יחסי של Credits שלא נוצלו, או בלי החזר — לפי המדיניות.
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="py-20 sm:py-28">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 text-center reveal">
+      <h2 class="text-3xl sm:text-4xl font-bold mb-4">מוכן להתחיל?</h2>
+      <p class="text-slate-400 mb-8">לחץ START בבוט והצטרף למערכת הרשמית.</p>
+      <a href="https://t.me/add_sud_bot" target="_blank" rel="noopener"
+        class="btn-primary inline-flex items-center gap-2 text-white font-semibold px-10 py-4 rounded-full text-lg">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161c-.18 1.897-.962 6.502-1.359 8.627-.168.9-.5 1.201-.82 1.23-.697.064-1.226-.461-1.901-.903-1.056-.693-1.653-1.124-2.678-1.801-1.185-.781-.417-1.21.258-1.911.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.139-5.062 3.345-.479.329-.913.489-1.302.481-.428-.009-1.252-.242-1.865-.44-.752-.244-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.831-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635.099-.002.321.023.465.141.121.099.154.232.17.326.016.093.036.305.02.47z"/></svg>
+        פתח את MemberFlow
+      </a>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-white/5 py-12">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-gradient-to-br from-accent-from via-accent-via to-accent-to flex items-center justify-center">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          </div>
+          <span class="font-semibold">MemberFlow</span>
+        </div>
+        <div class="flex flex-wrap items-center justify-center gap-6 text-sm text-slate-400">
+          <a href="/privacy.html" class="hover:text-white transition">מדיניות פרטיות</a>
+          <a href="/terms.html" class="hover:text-white transition">תנאי שימוש</a>
+          <a href="https://t.me/add_sud_bot" target="_blank" class="hover:text-white transition">תמיכה טכנית</a>
+          <a href="https://t.me/add_sub_Q" target="_blank" class="hover:text-white transition">קהילה</a>
+        </div>
+      </div>
+      <div class="mt-8 text-center text-xs text-slate-600">
+        © 2026 MemberFlow. כל הזכויות שמורות.
+      </div>
+    </div>
+  </footer>
+
+  <a href="/admin.html" class="fixed bottom-6 right-6 text-[10px] text-slate-700 hover:text-slate-500 transition z-30">admin</a>
+
+  <script>
+    const DEFAULT_STATS = {
+      mode: 'manual',
+      users: 1284,
+      orders: 3471,
+      credits: 89420,
+      speed: 18,
+      visits: 0
     };
-  }
 
-  // Track page view
-  function trackPageView() {
-    const info = getDeviceInfo();
-    const sid = getSessionId();
-    const isReturning = localStorage.getItem('mf_visited') === '1';
-    localStorage.setItem('mf_visited', '1');
+    function loadStats() {
+      try {
+        const saved = localStorage.getItem('mf_stats');
+        return saved ? { ...DEFAULT_STATS, ...JSON.parse(saved) } : DEFAULT_STATS;
+      } catch { return DEFAULT_STATS; }
+    }
 
-    const msg = `
-🟢 <b>כניסה חדשה לאתר</b>
-━━━━━━━━━━━━━━
-🆔 Session: <code>${sid}</code>
-👤 ${isReturning ? 'מבקר חוזר' : 'מבקר חדש'}
-📱 מכשיר: ${info.device}
-🖥 מסך: ${info.screen}
-🌐 שפה: ${info.lang}
-🔗 מקור: ${info.referrer}
-⏰ ${new Date().toLocaleString('he-IL')}
-    `.trim();
+    function animateValue(el, end, duration = 1500) {
+      const start = 0;
+      const startTime = performance.now();
+      function update(now) {
+        const progress = Math.min((now - startTime) / duration, 1);
+        const ease = 1 - Math.pow(1 - progress, 3);
+        const current = Math.floor(start + (end - start) * ease);
+        el.textContent = current.toLocaleString('he-IL');
+        if (progress < 1) requestAnimationFrame(update);
+      }
+      requestAnimationFrame(update);
+    }
 
-    sendToTelegram(msg);
-  }
+    function renderStats() {
+      const s = loadStats();
+      s.visits = (s.visits || 0) + 1;
+      localStorage.setItem('mf_stats', JSON.stringify(s));
 
-  // Track time on page
-  let pageStartTime = Date.now();
-  let timeSent = false;
-
-  function trackTimeOnPage() {
-    if (timeSent) return;
-    timeSent = true;
-    const seconds = Math.round((Date.now() - pageStartTime) / 1000);
-    if (seconds < 3) return;
-
-    const sid = getSessionId();
-    const msg = `
-⏱ <b>זמן שהייה בעמוד</b>
-━━━━━━━━━━━━━━
-🆔 Session: <code>${sid}</code>
-⏳ זמן: <b>${seconds} שניות</b> (${Math.floor(seconds/60)} דק׳ ${seconds%60} שנ׳)
-⏰ ${new Date().toLocaleString('he-IL')}
-    `.trim();
-
-    // sendBeacon גם עובד עם ה-API שלנו
-    const blob = new Blob([JSON.stringify({ text: msg })], { type: 'application/json' });
-    navigator.sendBeacon('/api/track', blob);
-  }
-
-  // Track button clicks
-  function trackClick(name) {
-    const sid = getSessionId();
-    const msg = `
-🖱 <b>לחיצה על כפתור</b>
-━━━━━━━━━━━━━━
-🆔 Session: <code>${sid}</code>
-📌 כפתור: <b>${name}</b>
-⏰ ${new Date().toLocaleString('he-IL')}
-    `.trim();
-    sendToTelegram(msg);
-  }
-
-  // Init tracking
-  document.addEventListener('DOMContentLoaded', () => {
-    trackPageView();
-
-    document.querySelectorAll('[data-track]').forEach(el => {
-      el.addEventListener('click', () => {
-        trackClick(el.getAttribute('data-track'));
+      document.querySelectorAll('[data-stat]').forEach(el => {
+        const key = el.dataset.stat;
+        if (s[key] !== undefined) animateValue(el, s[key]);
       });
-    });
-  });
-
-  window.addEventListener('pagehide', trackTimeOnPage);
-  window.addEventListener('beforeunload', trackTimeOnPage);
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') trackTimeOnPage();
-  });
-
-  // ==================== EXISTING CODE ====================
-  const DEFAULT_STATS = {
-    mode: 'manual',
-    users: 1284,
-    orders: 3471,
-    credits: 89420,
-    speed: 18,
-    visits: 0
-  };
-
-  function loadStats() {
-    try {
-      const saved = localStorage.getItem('mf_stats');
-      return saved ? { ...DEFAULT_STATS, ...JSON.parse(saved) } : DEFAULT_STATS;
-    } catch { return DEFAULT_STATS; }
-  }
-
-  function animateValue(el, end, duration = 1500) {
-    const start = 0;
-    const startTime = performance.now();
-    function update(now) {
-      const progress = Math.min((now - startTime) / duration, 1);
-      const ease = 1 - Math.pow(1 - progress, 3);
-      const current = Math.floor(start + (end - start) * ease);
-      el.textContent = current.toLocaleString('he-IL');
-      if (progress < 1) requestAnimationFrame(update);
     }
-    requestAnimationFrame(update);
-  }
 
-  function renderStats() {
-    const s = loadStats();
-    s.visits = (s.visits || 0) + 1;
-    localStorage.setItem('mf_stats', JSON.stringify(s));
-
-    document.querySelectorAll('[data-stat]').forEach(el => {
-      const key = el.dataset.stat;
-      if (s[key] !== undefined) animateValue(el, s[key]);
+    const a11yToggle = document.getElementById('a11y-toggle');
+    const a11yPanel = document.getElementById('a11y-panel');
+    a11yToggle.addEventListener('click', () => {
+      a11yPanel.classList.toggle('hidden-panel');
     });
-  }
 
-  const a11yToggle = document.getElementById('a11y-toggle');
-  const a11yPanel = document.getElementById('a11y-panel');
-  a11yToggle.addEventListener('click', () => {
-    a11yPanel.classList.toggle('hidden-panel');
-  });
-
-  function toggleA11y(cls) {
-    document.body.classList.toggle(cls);
-    if (cls === 'underline-links') {
-      document.querySelectorAll('a').forEach(a => a.style.textDecoration = document.body.classList.contains('underline-links') ? 'underline' : '');
+    function toggleA11y(cls) {
+      document.body.classList.toggle(cls);
+      if (cls === 'underline-links') {
+        document.querySelectorAll('a').forEach(a => a.style.textDecoration = document.body.classList.contains('underline-links') ? 'underline' : '');
+      }
     }
-  }
-  function resetA11y() {
-    document.body.classList.remove('large-text', 'high-contrast', 'underline-links');
-    document.querySelectorAll('a').forEach(a => a.style.textDecoration = '');
-  }
+    function resetA11y() {
+      document.body.classList.remove('large-text', 'high-contrast', 'underline-links');
+      document.querySelectorAll('a').forEach(a => a.style.textDecoration = '');
+    }
 
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
-  }, { threshold: 0.12 });
-  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.12 });
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
-  renderStats();
-</script>
+    renderStats();
+  </script>
+</body>
+</html>
