@@ -1,0 +1,176 @@
+<script>
+  // ==================== TELEGRAM TRACKING (מאובטח דרך השרת) ====================
+
+  function sendToTelegram(text) {
+    fetch('/api/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    }).catch(() => {});
+  }
+
+  // Session ID
+  function getSessionId() {
+    let sid = localStorage.getItem('mf_sid');
+    if (!sid) {
+      sid = 'S' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+      localStorage.setItem('mf_sid', sid);
+    }
+    return sid;
+  }
+
+  // Device info
+  function getDeviceInfo() {
+    const ua = navigator.userAgent;
+    let device = 'Desktop';
+    if (/Mobile|Android|iPhone|iPad/.test(ua)) device = 'Mobile';
+    if (/Tablet|iPad/.test(ua)) device = 'Tablet';
+    return {
+      device,
+      screen: `${screen.width}x${screen.height}`,
+      lang: navigator.language || 'unknown',
+      referrer: document.referrer || 'ישיר / אין מקור'
+    };
+  }
+
+  // Track page view
+  function trackPageView() {
+    const info = getDeviceInfo();
+    const sid = getSessionId();
+    const isReturning = localStorage.getItem('mf_visited') === '1';
+    localStorage.setItem('mf_visited', '1');
+
+    const msg = `
+🟢 <b>כניסה חדשה לאתר</b>
+━━━━━━━━━━━━━━
+🆔 Session: <code>${sid}</code>
+👤 ${isReturning ? 'מבקר חוזר' : 'מבקר חדש'}
+📱 מכשיר: ${info.device}
+🖥 מסך: ${info.screen}
+🌐 שפה: ${info.lang}
+🔗 מקור: ${info.referrer}
+⏰ ${new Date().toLocaleString('he-IL')}
+    `.trim();
+
+    sendToTelegram(msg);
+  }
+
+  // Track time on page
+  let pageStartTime = Date.now();
+  let timeSent = false;
+
+  function trackTimeOnPage() {
+    if (timeSent) return;
+    timeSent = true;
+    const seconds = Math.round((Date.now() - pageStartTime) / 1000);
+    if (seconds < 3) return;
+
+    const sid = getSessionId();
+    const msg = `
+⏱ <b>זמן שהייה בעמוד</b>
+━━━━━━━━━━━━━━
+🆔 Session: <code>${sid}</code>
+⏳ זמן: <b>${seconds} שניות</b> (${Math.floor(seconds/60)} דק׳ ${seconds%60} שנ׳)
+⏰ ${new Date().toLocaleString('he-IL')}
+    `.trim();
+
+    // sendBeacon גם עובד עם ה-API שלנו
+    const blob = new Blob([JSON.stringify({ text: msg })], { type: 'application/json' });
+    navigator.sendBeacon('/api/track', blob);
+  }
+
+  // Track button clicks
+  function trackClick(name) {
+    const sid = getSessionId();
+    const msg = `
+🖱 <b>לחיצה על כפתור</b>
+━━━━━━━━━━━━━━
+🆔 Session: <code>${sid}</code>
+📌 כפתור: <b>${name}</b>
+⏰ ${new Date().toLocaleString('he-IL')}
+    `.trim();
+    sendToTelegram(msg);
+  }
+
+  // Init tracking
+  document.addEventListener('DOMContentLoaded', () => {
+    trackPageView();
+
+    document.querySelectorAll('[data-track]').forEach(el => {
+      el.addEventListener('click', () => {
+        trackClick(el.getAttribute('data-track'));
+      });
+    });
+  });
+
+  window.addEventListener('pagehide', trackTimeOnPage);
+  window.addEventListener('beforeunload', trackTimeOnPage);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') trackTimeOnPage();
+  });
+
+  // ==================== EXISTING CODE ====================
+  const DEFAULT_STATS = {
+    mode: 'manual',
+    users: 1284,
+    orders: 3471,
+    credits: 89420,
+    speed: 18,
+    visits: 0
+  };
+
+  function loadStats() {
+    try {
+      const saved = localStorage.getItem('mf_stats');
+      return saved ? { ...DEFAULT_STATS, ...JSON.parse(saved) } : DEFAULT_STATS;
+    } catch { return DEFAULT_STATS; }
+  }
+
+  function animateValue(el, end, duration = 1500) {
+    const start = 0;
+    const startTime = performance.now();
+    function update(now) {
+      const progress = Math.min((now - startTime) / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      const current = Math.floor(start + (end - start) * ease);
+      el.textContent = current.toLocaleString('he-IL');
+      if (progress < 1) requestAnimationFrame(update);
+    }
+    requestAnimationFrame(update);
+  }
+
+  function renderStats() {
+    const s = loadStats();
+    s.visits = (s.visits || 0) + 1;
+    localStorage.setItem('mf_stats', JSON.stringify(s));
+
+    document.querySelectorAll('[data-stat]').forEach(el => {
+      const key = el.dataset.stat;
+      if (s[key] !== undefined) animateValue(el, s[key]);
+    });
+  }
+
+  const a11yToggle = document.getElementById('a11y-toggle');
+  const a11yPanel = document.getElementById('a11y-panel');
+  a11yToggle.addEventListener('click', () => {
+    a11yPanel.classList.toggle('hidden-panel');
+  });
+
+  function toggleA11y(cls) {
+    document.body.classList.toggle(cls);
+    if (cls === 'underline-links') {
+      document.querySelectorAll('a').forEach(a => a.style.textDecoration = document.body.classList.contains('underline-links') ? 'underline' : '');
+    }
+  }
+  function resetA11y() {
+    document.body.classList.remove('large-text', 'high-contrast', 'underline-links');
+    document.querySelectorAll('a').forEach(a => a.style.textDecoration = '');
+  }
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  renderStats();
+</script>
