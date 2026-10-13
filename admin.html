@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MemberFlow — פאנל ניהול</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            dark: { 950: '#06060B', 900: '#0B0B12', 800: '#12121A', 700: '#1A1A24', 600: '#242430' },
+            accent: { from: '#4F6BFF', via: '#7B5CFF', to: '#A855F7' }
+          },
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background: #0B0B12; color: #F1F5F9; font-family: 'Inter', system-ui, sans-serif; }
+    .glass { background: rgba(18,18,26,0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.06); }
+    .btn-primary { background: linear-gradient(135deg, #4F6BFF, #7B5CFF, #A855F7); }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+  <div id="login-screen" class="w-full max-w-sm">
+    <div class="glass rounded-2xl p-8">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-accent-from via-accent-via to-accent-to flex items-center justify-center">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </div>
+        <div>
+          <div class="font-bold">MemberFlow</div>
+          <div class="text-xs text-slate-400">Admin Panel</div>
+        </div>
+      </div>
+      <label class="block text-sm text-slate-400 mb-2">סיסמה</label>
+      <input id="password" type="password" placeholder="••••" 
+        class="w-full bg-dark-700 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-accent-from/50 mb-4" />
+      <button onclick="tryLogin()" class="btn-primary w-full text-white font-semibold py-3 rounded-xl">כניסה</button>
+      <p id="login-error" class="text-red-400 text-xs mt-3 hidden">סיסמה שגויה</p>
+    </div>
+  </div>
+
+  <div id="dashboard" class="hidden w-full max-w-2xl">
+    <div class="flex items-center justify-between mb-8">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-accent-from via-accent-via to-accent-to flex items-center justify-center">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </div>
+        <div>
+          <div class="font-bold">פאנל ניהול</div>
+          <div class="text-xs text-slate-400">MemberFlow Admin</div>
+        </div>
+      </div>
+      <button onclick="logout()" class="text-sm text-slate-400 hover:text-white transition">יציאה</button>
+    </div>
+
+    <div class="glass rounded-2xl p-6 mb-5">
+      <h2 class="font-semibold mb-4">מצב סטטיסטיקות</h2>
+      <div class="flex gap-3 mb-6">
+        <button id="btn-manual" onclick="setMode('manual')" class="flex-1 py-2.5 rounded-xl text-sm font-medium border border-white/10">ידני</button>
+        <button id="btn-auto" onclick="setMode('auto')" class="flex-1 py-2.5 rounded-xl text-sm font-medium border border-white/10">אוטומטי</button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">משתמשים פעילים</label>
+          <input id="stat-users" type="number" class="w-full bg-dark-700 border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-accent-from/50" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">הזמנות שהושלמו</label>
+          <input id="stat-orders" type="number" class="w-full bg-dark-700 border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-accent-from/50" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">קרדיטים במחזור</label>
+          <input id="stat-credits" type="number" class="w-full bg-dark-700 border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-accent-from/50" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">דק׳ ממוצע להזמנה</label>
+          <input id="stat-speed" type="number" class="w-full bg-dark-700 border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-accent-from/50" />
+        </div>
+      </div>
+      <p class="text-xs text-slate-500 mt-3">ביקורים מצטברים: <span id="stat-visits">0</span></p>
+    </div>
+
+    <div class="glass rounded-2xl p-6 mb-5">
+      <h2 class="font-semibold mb-3">קישור תמיכה טכנית</h2>
+      <p class="text-xs text-slate-400 mb-3">הכפתור "תמיכה" באתר יפתח את הקישור הזה</p>
+      <input id="support-link" type="text" value="https://t.me/add_sud_bot"
+        class="w-full bg-dark-700 border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-accent-from/50" />
+    </div>
+
+    <div class="glass rounded-2xl p-6 mb-5">
+      <h2 class="font-semibold mb-3">שינוי סיסמה</h2>
+      <input id="new-password" type="password" placeholder="סיסמה חדשה"
+        class="w-full bg-dark-700 border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-accent-from/50 mb-3" />
+      <button onclick="changePassword()" class="text-sm text-accent-from hover:underline">עדכן סיסמה</button>
+    </div>
+
+    <button onclick="saveAll()" class="btn-primary w-full text-white font-semibold py-3.5 rounded-xl">
+      שמור שינויים
+    </button>
+    <p id="save-msg" class="text-center text-sm text-green-400 mt-3 hidden">✓ נשמר בהצלחה</p>
+  </div>
+
+  <script>
+    const DEFAULT_PASS = '1111';
+    const DEFAULT_STATS = { mode: 'manual', users: 1284, orders: 3471, credits: 89420, speed: 18, visits: 0 };
+
+    function getPass() {
+      return localStorage.getItem('mf_admin_pass') || DEFAULT_PASS;
+    }
+    function getStats() {
+      try {
+        return { ...DEFAULT_STATS, ...JSON.parse(localStorage.getItem('mf_stats') || '{}') };
+      } catch { return DEFAULT_STATS; }
+    }
+
+    function tryLogin() {
+      const input = document.getElementById('password').value;
+      if (input === getPass()) {
+        sessionStorage.setItem('mf_auth', '1');
+        showDashboard();
+      } else {
+        document.getElementById('login-error').classList.remove('hidden');
+      }
+    }
+
+    document.getElementById('password').addEventListener('keydown', e => {
+      if (e.key === 'Enter') tryLogin();
+    });
+
+    function logout() {
+      sessionStorage.removeItem('mf_auth');
+      location.reload();
+    }
+
+    function showDashboard() {
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('dashboard').classList.remove('hidden');
+      const s = getStats();
+      document.getElementById('stat-users').value = s.users;
+      document.getElementById('stat-orders').value = s.orders;
+      document.getElementById('stat-credits').value = s.credits;
+      document.getElementById('stat-speed').value = s.speed;
+      document.getElementById('stat-visits').textContent = s.visits || 0;
+      setMode(s.mode, false);
+      const link = localStorage.getItem('mf_support_link');
+      if (link) document.getElementById('support-link').value = link;
+    }
+
+    function setMode(mode, update = true) {
+      const s = getStats();
+      s.mode = mode;
+      if (update) localStorage.setItem('mf_stats', JSON.stringify(s));
+      document.getElementById('btn-manual').className = mode === 'manual'
+        ? 'flex-1 py-2.5 rounded-xl text-sm font-medium bg-gradient-to-r from-accent-from to-accent-to text-white'
+        : 'flex-1 py-2.5 rounded-xl text-sm font-medium border border-white/10';
+      document.getElementById('btn-auto').className = mode === 'auto'
+        ? 'flex-1 py-2.5 rounded-xl text-sm font-medium bg-gradient-to-r from-accent-from to-accent-to text-white'
+        : 'flex-1 py-2.5 rounded-xl text-sm font-medium border border-white/10';
+    }
+
+    function saveAll() {
+      const s = getStats();
+      s.users = Number(document.getElementById('stat-users').value) || 0;
+      s.orders = Number(document.getElementById('stat-orders').value) || 0;
+      s.credits = Number(document.getElementById('stat-credits').value) || 0;
+      s.speed = Number(document.getElementById('stat-speed').value) || 0;
+      localStorage.setItem('mf_stats', JSON.stringify(s));
+      localStorage.setItem('mf_support_link', document.getElementById('support-link').value);
+      const msg = document.getElementById('save-msg');
+      msg.classList.remove('hidden');
+      setTimeout(() => msg.classList.add('hidden'), 2000);
+    }
+
+    function changePassword() {
+      const np = document.getElementById('new-password').value;
+      if (np && np.length >= 4) {
+        localStorage.setItem('mf_admin_pass', np);
+        document.getElementById('new-password').value = '';
+        alert('הסיסמה עודכנה');
+      } else {
+        alert('סיסמה חייבת להיות לפחות 4 תווים');
+      }
+    }
+
+    if (sessionStorage.getItem('mf_auth') === '1') showDashboard();
+  </script>
+</body>
+</html>
